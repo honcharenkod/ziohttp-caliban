@@ -1,5 +1,8 @@
 import caliban.ZHttpAdapter
+import dao.repositories.UserRepository
 import graphql.{ProfileApi, ProfileService}
+import io.getquill.SnakeCase
+import io.getquill.jdbczio.Quill
 import zhttp.http._
 import zhttp.service.Server
 import zio.ZIOAppDefault
@@ -10,14 +13,17 @@ object Main extends ZIOAppDefault {
       interpreter <- ProfileApi.api.interpreter
       _ <- Server
         .start(
-          8088,
+          9000,
           Http.collectHttp[Request] {
+            //case Method.GET -> !! / "text" => Response.text("Hello World!")
             case _ -> !! / "api" / "graphql" => ZHttpAdapter.makeHttpService(interpreter)
           }
-        )
-        .forever
+        ).forever
     } yield ())
       .provide(
-          ProfileService.make
+        Quill.Postgres.fromNamingStrategy(SnakeCase),
+        Quill.DataSource.fromPrefix("database"),
+        UserRepository.live,
+        ProfileService.live
       ).exitCode
 }

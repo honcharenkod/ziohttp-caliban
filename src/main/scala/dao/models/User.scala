@@ -1,3 +1,3 @@
 package dao.models
 
-case class User(name: String)
+case class User(id: Long, email: String, name: String)

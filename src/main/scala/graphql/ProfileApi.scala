@@ -4,10 +4,12 @@ import caliban.GraphQL.graphQL
 import caliban.schema.Annotations.GQLDescription
 import caliban.schema.GenericSchema
 import caliban.wrappers.ApolloTracing.apolloTracing
+import caliban.wrappers.Wrapper.OverallWrapper
 import caliban.wrappers.Wrappers._
-import caliban.{GraphQL, RootResolver}
+import caliban.{CalibanError, GraphQL, GraphQLRequest, GraphQLResponse, RootResolver}
 import dao.models.User
 import graphql.ProfileService.ProfileService
+import zio.Console.{printLine, printLineError}
 import zio._
 
 import scala.language.postfixOps
