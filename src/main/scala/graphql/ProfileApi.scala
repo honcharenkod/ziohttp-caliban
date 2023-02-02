@@ -8,6 +8,7 @@ import caliban.wrappers.Wrapper.OverallWrapper
 import caliban.wrappers.Wrappers._
 import caliban.{CalibanError, GraphQL, GraphQLRequest, GraphQLResponse, RootResolver}
 import dao.models.User
+import graphql.ProfileApi.Mutations
 import graphql.ProfileService.ProfileService
 import zio.Console.{printLine, printLineError}
 import zio._
@@ -20,13 +21,22 @@ object ProfileApi extends GenericSchema[ProfileService] {
                       userInfo: Id => RIO[ProfileService, Option[User]]
                     )
 
+  case class Mutations(
+                        @GQLDescription("Create a new user profile")
+                        singUp: SignUp => RIO[ProfileService, User]
+                      )
+
   case class Id(id: Long)
+  case class SignUp(email: String, name: String)
 
   val api: GraphQL[ProfileService] =
     graphQL(
       RootResolver(
         Queries(
           args => ProfileService.getUserInfo(args.id)
+        ),
+        Mutations(
+          args => ProfileService.signUp(args.email, args.name)
         )
       )
     ) @@
