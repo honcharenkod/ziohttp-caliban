@@ -6,7 +6,14 @@ lazy val root = (project in file("."))
   .settings(
     name := "ziohttp-caliban"
   )
+
+resolvers ++= Seq(
+  "Quill Generic" at "https://repo1.maven.org"
+)
+
+
 val zioHttp = "2.0.2"
+
 libraryDependencies ++= Seq(
   "dev.zio" %% "zio" % "2.0.6",
   "io.d11" %% "zhttp" % "2.0.0-RC7",
@@ -14,7 +21,7 @@ libraryDependencies ++= Seq(
   "com.github.ghostdogpr" %% "caliban" % zioHttp,
   "com.github.ghostdogpr" %% "caliban-zio-http" % zioHttp,
   "io.getquill" %% "quill-jdbc-zio" % "4.6.0",
-  "org.postgresql" % "postgresql" % "42.5.1",
+  "org.postgresql" % "postgresql" % "42.5.2",
   "dev.zio" %% "zio-logging-slf4j" % "2.1.8",
   "org.slf4j" % "slf4j-api" % "2.0.5",
   "org.slf4j" % "slf4j-simple" % "2.0.5",

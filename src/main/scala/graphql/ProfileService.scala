@@ -1,7 +1,7 @@
 package graphql
 
 import dao.models.User
-import dao.repositories.UserRepository
+import dao.repositories.UserRepository.UserRepository
 import zio._
 
 object ProfileService {

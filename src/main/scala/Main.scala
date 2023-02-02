@@ -1,5 +1,5 @@
 import caliban.ZHttpAdapter
-import dao.repositories.UserRepository
+import dao.repositories.UserRepositoryImpl
 import graphql.{ProfileApi, ProfileService}
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
@@ -23,7 +23,7 @@ object Main extends ZIOAppDefault {
       .provide(
         Quill.Postgres.fromNamingStrategy(SnakeCase),
         Quill.DataSource.fromPrefix("database"),
-        UserRepository.live,
+        UserRepositoryImpl.live,
         ProfileService.live
       ).exitCode
 }
