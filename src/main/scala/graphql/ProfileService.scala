@@ -2,14 +2,18 @@ package graphql
 
 import dao.models.User
 import dao.repositories.UserRepository.UserRepository
+import utils.JWTService.JWTService
 import zio._
 
 object ProfileService {
   trait ProfileService {
     def getUserInfo(userId: Long): RIO[ProfileService, Option[User]]
+
     def signUp(email: String, name: String): RIO[ProfileService, User]
   }
-  case class ProfileServiceImpl(userRepository: UserRepository) extends ProfileService {
+
+  case class ProfileServiceImpl(userRepository: UserRepository,
+                                jwtService: JWTService) extends ProfileService {
     override def getUserInfo(userId: Long): RIO[ProfileService, Option[User]] =
       userRepository.read(userId)
 
@@ -29,9 +33,10 @@ object ProfileService {
   def signUp(email: String, name: String): RIO[ProfileService, User] =
     ZIO.serviceWithZIO(_.signUp(email: String, name: String))
 
-  val live: ZLayer[UserRepository, Nothing, ProfileService] = ZLayer {
+  val live: ZLayer[UserRepository with JWTService, Nothing, ProfileService] = ZLayer {
     for {
       userRepository <- ZIO.service[UserRepository]
-    } yield ProfileServiceImpl(userRepository)
+      jwtService <- ZIO.service[JWTService]
+    } yield ProfileServiceImpl(userRepository, jwtService)
   }
 }

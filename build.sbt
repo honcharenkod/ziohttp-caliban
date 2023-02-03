@@ -21,11 +21,13 @@ libraryDependencies ++= Seq(
   "com.github.ghostdogpr" %% "caliban" % zioHttp,
   "com.github.ghostdogpr" %% "caliban-zio-http" % zioHttp,
   "io.getquill" %% "quill-jdbc-zio" % "4.6.0",
-  "org.postgresql" % "postgresql" % "42.5.2",
+  "org.postgresql" % "postgresql" % "42.5.3",
   "dev.zio" %% "zio-logging-slf4j" % "2.1.8",
   "org.slf4j" % "slf4j-api" % "2.0.5",
   "org.slf4j" % "slf4j-simple" % "2.0.5",
   "dev.zio" %% "zio-config" % "3.0.7",
   "dev.zio" %% "zio-config-typesafe" % "3.0.7",
-  "dev.zio" %% "zio-config-magnolia" % "3.0.7"
+  "dev.zio" %% "zio-config-magnolia" % "3.0.7",
+  "com.github.jwt-scala" %% "jwt-core" % "9.1.2",
+  "dev.zio" %% "zio-json" % "0.4.2"
 )

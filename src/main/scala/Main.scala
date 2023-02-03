@@ -3,6 +3,8 @@ import dao.repositories.UserRepositoryImpl
 import graphql.{ProfileApi, ProfileService}
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
+import utils.JWTService
+import utils.config.ConfigService
 import zhttp.http._
 import zhttp.service.Server
 import zio.ZIOAppDefault
@@ -24,6 +26,8 @@ object Main extends ZIOAppDefault {
         Quill.Postgres.fromNamingStrategy(SnakeCase),
         Quill.DataSource.fromPrefix("database"),
         UserRepositoryImpl.live,
+        ConfigService.live,
+        JWTService.live,
         ProfileService.live
       ).exitCode
 }
