@@ -16,7 +16,8 @@ import zio._
 import scala.language.postfixOps
 object ProfileApi extends GenericSchema[ProfileService] {
 
-  case class Queries(testQuery: UIO[String])
+  case class Queries(@GQLDescription("Get auth token")
+                     singIn: SignIn => RIO[ProfileService, String])
 
   case class Mutations(
                         @GQLDescription("Create a new user profile")
@@ -24,11 +25,14 @@ object ProfileApi extends GenericSchema[ProfileService] {
                       )
 
   case class SignUp(email: String, name: String, surname: String, password: String)
+  case class SignIn(email: String, password: String)
 
   val api: GraphQL[ProfileService] =
     graphQL(
       RootResolver(
-        Queries(ZIO.succeed("OK")),
+        Queries(
+          args => ProfileService.signIn(args.email, args.password)
+        ),
         Mutations(
           args => ProfileService.signUp(args.email, args.name, args.surname, args.password)
         )

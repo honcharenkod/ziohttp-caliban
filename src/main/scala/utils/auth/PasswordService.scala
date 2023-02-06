@@ -1,5 +1,6 @@
 package utils.auth
 
+import exceptions.InvalidCredentialsException
 import io.github.nremond.SecureHash
 import utils.config.ConfigService.ConfigService
 import zio.{Task, ZIO, ZLayer}
@@ -7,7 +8,8 @@ import zio.{Task, ZIO, ZLayer}
 object PasswordService {
   trait PasswordService {
     def hashPassword(password: String): Task[String]
-    def validatePassword(password: String, hashedPassword: String): Task[Boolean]
+
+    def validatePassword(password: String, hashedPassword: String): Task[Unit]
   }
 
   case class PasswordHashingServiceImpl(config: ConfigService) extends PasswordService {
@@ -16,10 +18,10 @@ object PasswordService {
         SecureHash.createHash(password)
       }
 
-    override def validatePassword(password: String, hashedPassword: String): Task[Boolean] =
-      ZIO.succeed {
-        SecureHash.validatePassword(password, hashedPassword)
-      }
+    override def validatePassword(password: String, hashedPassword: String): Task[Unit] =
+      if (SecureHash.validatePassword(password, hashedPassword))
+        ZIO.unit
+      else ZIO.fail(new InvalidCredentialsException)
   }
 
   val live: ZLayer[ConfigService, Nothing, PasswordService] = ZLayer {
