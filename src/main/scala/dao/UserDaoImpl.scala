@@ -1,47 +1,48 @@
-package dao.repositories
+package dao
 
+import dao.UserDaoImpl.live
 import dao.models.User
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
-import zio._
+import zio.{Task, ZLayer}
 
-class UserRepositoryImpl(ctx: Quill.Postgres[SnakeCase]) extends UserRepository.Service {
+class UserDaoImpl(ctx: Quill.Postgres[SnakeCase]) extends CommonDAO[User] {
 
   import ctx._
 
-  private val users = quote(
-    querySchema[User]("users", _.id -> "id", _.email -> "email", _.name -> "name")
+  override val quoted = quote(
+    querySchema[User]("users", _.id -> "id", _.email -> "email", _.name -> "name", _.surname -> "surname")
   )
-
   override def create(entity: User): Task[User] =
     run(
       quote(
-        users.insert(_.email -> lift(entity.email), _.name -> lift(entity.name))
+        quoted.insert(_.email -> lift(entity.email), _.name -> lift(entity.name), _.surname -> lift(entity.surname))
       ).returning(_.id)
     ).map(id => entity.copy(id = id))
 
   override def read(id: Long): Task[Option[User]] =
     run(
       quote(
-        users.filter(_.id == lift(id))
+        quoted.filter(_.id == lift(id))
       )
     ).map(_.headOption)
 
   override def update(entity: User): Task[Option[User]] =
     run(
       quote(
-        users.updateValue(lift(entity))
+        quoted.updateValue(lift(entity))
       ).returning(_.id)
     ).fold(_ => None, id => Some(entity.copy(id = id)))
 
   override def delete(id: Long): Task[Unit] =
     run(
       quote(
-        users.filter(_.id == lift(id)).delete
+        quoted.filter(_.id == lift(id)).delete
       )
     ).map(_ => {})
+
 }
 
-object UserRepositoryImpl {
-  val live = ZLayer.fromFunction(new UserRepositoryImpl(_))
+object UserDaoImpl {
+  val live = ZLayer.fromFunction(new UserDaoImpl(_))
 }

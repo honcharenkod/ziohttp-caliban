@@ -2,7 +2,7 @@ package dao.models
 
 import zio.json._
 
-case class User(id: Long, email: String, name: String)
+case class User(id: Long, email: String, name: String, surname: String)
 
 object User {
   implicit val decoder: JsonDecoder[User] =

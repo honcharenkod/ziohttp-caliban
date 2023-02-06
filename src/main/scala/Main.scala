@@ -1,13 +1,14 @@
 import caliban.ZHttpAdapter
-import dao.repositories.UserRepositoryImpl
+import dao.repositories.ProfileRepositoryImpl
+import dao.{AuthInfoDAOImpl, UserDaoImpl}
 import graphql.{ProfileApi, ProfileService}
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
-import utils.JWTService
+import utils.auth.{JWTService, PasswordService}
 import utils.config.ConfigService
 import zhttp.http._
 import zhttp.service.Server
-import zio.ZIOAppDefault
+import zio._
 
 object Main extends ZIOAppDefault {
   override def run =
@@ -23,11 +24,14 @@ object Main extends ZIOAppDefault {
         ).forever
     } yield ())
       .provide(
+        ConfigService.live,
         Quill.Postgres.fromNamingStrategy(SnakeCase),
         Quill.DataSource.fromPrefix("database"),
-        UserRepositoryImpl.live,
-        ConfigService.live,
+        UserDaoImpl.live,
+        AuthInfoDAOImpl.live,
+        ProfileRepositoryImpl.live,
         JWTService.live,
+        PasswordService.live,
         ProfileService.live
-      ).exitCode
+      )
 }

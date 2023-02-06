@@ -1,42 +1,35 @@
 package graphql
 
-import dao.models.User
-import dao.repositories.UserRepository.UserRepository
-import utils.JWTService.JWTService
+import dao.models.{AuthInfo, User}
+import dao.repositories.ProfileRepository.ProfileRepository
+import utils.auth.JWTService.JWTService
+import utils.auth.PasswordService.PasswordService
 import zio._
 
 object ProfileService {
   trait ProfileService {
-    def getUserInfo(userId: Long): RIO[ProfileService, Option[User]]
-
-    def signUp(email: String, name: String): RIO[ProfileService, User]
+    def signUp(email: String, name: String, surname: String, password: String): RIO[ProfileService, User]
   }
 
-  case class ProfileServiceImpl(userRepository: UserRepository,
-                                jwtService: JWTService) extends ProfileService {
-    override def getUserInfo(userId: Long): RIO[ProfileService, Option[User]] =
-      userRepository.read(userId)
+  case class ProfileServiceImpl(userRepository: ProfileRepository,
+                                jwtService: JWTService,
+                                passwordService: PasswordService) extends ProfileService {
 
-    override def signUp(email: String, name: String): RIO[ProfileService, User] =
-      userRepository.create(
-        User(
-          0,
-          email,
-          name
-        )
-      )
+    override def signUp(email: String, name: String, surname: String, password: String): RIO[ProfileService, User] =
+      for {
+        hashedPassword <- passwordService.hashPassword(password)
+        user <-
+          userRepository.signUp(email, name, surname, hashedPassword)
+      } yield user
   }
+  def signUp(email: String, name: String, surname: String, password: String): RIO[ProfileService, User] =
+    ZIO.serviceWithZIO(_.signUp(email, name, surname, password))
 
-  def getUserInfo(userId: Long): RIO[ProfileService, Option[User]] =
-    ZIO.serviceWithZIO(_.getUserInfo(userId))
-
-  def signUp(email: String, name: String): RIO[ProfileService, User] =
-    ZIO.serviceWithZIO(_.signUp(email: String, name: String))
-
-  val live: ZLayer[UserRepository with JWTService, Nothing, ProfileService] = ZLayer {
+  val live: ZLayer[ProfileRepository with JWTService with PasswordService, Nothing, ProfileService] = ZLayer {
     for {
-      userRepository <- ZIO.service[UserRepository]
+      userRepository <- ZIO.service[ProfileRepository]
       jwtService <- ZIO.service[JWTService]
-    } yield ProfileServiceImpl(userRepository, jwtService)
+      passwordService <- ZIO.service[PasswordService]
+    } yield ProfileServiceImpl(userRepository, jwtService, passwordService)
   }
 }

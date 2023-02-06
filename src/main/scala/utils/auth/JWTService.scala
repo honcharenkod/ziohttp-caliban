@@ -1,10 +1,8 @@
-package utils
+package utils.auth
 
 import dao.models.User
-import dao.repositories.UserRepository.UserRepository
-import graphql.ProfileService.ProfileService
 import pdi.jwt._
-import utils.config.ConfigService.{CommonConfig, ConfigService}
+import utils.config.ConfigService.ConfigService
 import zio._
 import zio.json._
 
@@ -16,14 +14,15 @@ object JWTService {
   }
 
   case class JWTServiceImpl(configService: ConfigService) extends JWTService {
+    private val jwtConfig = configService.get.jwt
     override def generateToken(user: User): Task[String] =
       ZIO.succeed {
-        Jwt.encode(user.toJsonPretty, "secretKey", JwtAlgorithm.HS256)
+        Jwt.encode(user.toJsonPretty, jwtConfig.secretKey, JwtAlgorithm.HS256)
       }
 
     override def validateToken(token: String): Task[User] =
       ZIO.fromTry {
-        Jwt.decode(token, "secretKey", Seq(JwtAlgorithm.HS256))
+        Jwt.decode(token, jwtConfig.secretKey, Seq(JwtAlgorithm.HS256))
           .map(_.content.fromJson[User])
       }
         .map(_.left.map(new Throwable(_)))

@@ -29,5 +29,6 @@ libraryDependencies ++= Seq(
   "dev.zio" %% "zio-config-typesafe" % "3.0.7",
   "dev.zio" %% "zio-config-magnolia" % "3.0.7",
   "com.github.jwt-scala" %% "jwt-core" % "9.1.2",
-  "dev.zio" %% "zio-json" % "0.4.2"
+  "dev.zio" %% "zio-json" % "0.4.2",
+  "io.github.nremond" %% "pbkdf2-scala" % "0.7.0"
 )
