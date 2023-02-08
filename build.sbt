@@ -15,7 +15,7 @@ resolvers ++= Seq(
 val zioHttp = "2.0.2"
 
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio" % "2.0.6",
+  "dev.zio" %% "zio" % "2.0.7",
   "io.d11" %% "zhttp" % "2.0.0-RC7",
   "io.d11" %% "zhttp-test" % "2.0.0-RC7" % Test,
   "com.github.ghostdogpr" %% "caliban" % zioHttp,

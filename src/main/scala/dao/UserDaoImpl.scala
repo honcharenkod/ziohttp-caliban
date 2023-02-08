@@ -1,6 +1,5 @@
 package dao
 
-import dao.UserDaoImpl.live
 import dao.models.User
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
@@ -11,12 +10,24 @@ class UserDaoImpl(ctx: Quill.Postgres[SnakeCase]) extends CommonDAO[User] {
   import ctx._
 
   override val quoted = quote(
-    querySchema[User]("users", _.id -> "id", _.email -> "email", _.name -> "name", _.surname -> "surname")
+    querySchema[User](
+      "users",
+      _.id -> "id",
+      _.email -> "email",
+      _.name -> "name",
+      _.surname -> "surname",
+      _.role -> "role")
   )
+
   override def create(entity: User): Task[User] =
     run(
       quote(
-        quoted.insert(_.email -> lift(entity.email), _.name -> lift(entity.name), _.surname -> lift(entity.surname))
+        quoted.insert(
+          _.email -> lift(entity.email),
+          _.name -> lift(entity.name),
+          _.surname -> lift(entity.surname),
+          _.role -> lift(entity.role)
+        )
       ).returning(_.id)
     ).map(id => entity.copy(id = id))
 

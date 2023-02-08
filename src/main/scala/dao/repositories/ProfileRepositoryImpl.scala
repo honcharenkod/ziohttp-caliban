@@ -1,6 +1,6 @@
 package dao.repositories
 
-import dao.models.{AuthInfo, User}
+import dao.models.{AuthInfo, Role, User}
 import dao.{AuthInfoDAOImpl, UserDaoImpl}
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
@@ -17,7 +17,7 @@ class ProfileRepositoryImpl(ctx: Quill.Postgres[SnakeCase],
 
   override def signUp(email: String, name: String, surname: String, password: String): Task[User] =
     for {
-      user <- userDAO.create(User(0, email, name, surname))
+      user <- userDAO.create(User(0, email, name, surname, Role.User))
       _ <- authInfoDAO.create(AuthInfo(0, user.id, password))
     } yield user
 

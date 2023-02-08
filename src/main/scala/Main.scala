@@ -1,7 +1,9 @@
 import caliban.ZHttpAdapter
+import dao.models.User
 import dao.repositories.ProfileRepositoryImpl
 import dao.{AuthInfoDAOImpl, UserDaoImpl}
-import graphql.{ProfileApi, ProfileService}
+import graphql.auth.Auth
+import graphql._
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
 import utils.auth.{JWTService, PasswordService}
@@ -19,11 +21,13 @@ object Main extends ZIOAppDefault {
           9000,
           Http.collectHttp[Request] {
             //case Method.GET -> !! / "text" => Response.text("Hello World!")
-            case _ -> !! / "api" / "graphql" => ZHttpAdapter.makeHttpService(interpreter)
+            case _ -> !! / "api" / "graphql" =>
+              ZHttpAdapter.makeHttpService(interpreter) @@ Auth.middleware
           }
         ).forever
     } yield ())
       .provide(
+        ZLayer.scoped(FiberRef.make(Option.empty[User])),
         ConfigService.live,
         Quill.Postgres.fromNamingStrategy(SnakeCase),
         Quill.DataSource.fromPrefix("database"),
@@ -32,6 +36,7 @@ object Main extends ZIOAppDefault {
         ProfileRepositoryImpl.live,
         JWTService.live,
         PasswordService.live,
+        Auth.live,
         ProfileService.live
       )
 }

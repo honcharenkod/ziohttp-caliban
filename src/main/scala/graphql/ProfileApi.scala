@@ -2,36 +2,39 @@ package graphql
 
 import caliban.GraphQL.graphQL
 import caliban.schema.Annotations.GQLDescription
-import caliban.schema.GenericSchema
+import caliban.schema.{GenericSchema, Schema}
 import caliban.wrappers.ApolloTracing.apolloTracing
-import caliban.wrappers.Wrapper.OverallWrapper
 import caliban.wrappers.Wrappers._
-import caliban.{CalibanError, GraphQL, GraphQLRequest, GraphQLResponse, RootResolver}
-import dao.models.User
-import graphql.ProfileApi.Mutations
+import caliban.{GraphQL, RootResolver}
+import dao.models.{Role, User}
 import graphql.ProfileService.ProfileService
-import zio.Console.{printLine, printLineError}
+import graphql.auth.Auth
+import graphql.auth.Auth.{Auth, authorize}
 import zio._
 
 import scala.language.postfixOps
-object ProfileApi extends GenericSchema[ProfileService] {
+
+object ProfileApi extends GenericSchema[ProfileService with Auth] {
 
   case class Queries(@GQLDescription("Get auth token")
-                     singIn: SignIn => RIO[ProfileService, String])
+                     singIn: SignIn => RIO[ProfileService, String],
+                     myProfile: RIO[Auth, User])
 
   case class Mutations(
                         @GQLDescription("Create a new user profile")
                         singUp: SignUp => RIO[ProfileService, User]
                       )
 
+  implicit val roleSchema: Schema[Any, Role] = Schema.gen
   case class SignUp(email: String, name: String, surname: String, password: String)
   case class SignIn(email: String, password: String)
 
-  val api: GraphQL[ProfileService] =
+  val api: GraphQL[ProfileService with Auth] =
     graphQL(
       RootResolver(
         Queries(
-          args => ProfileService.signIn(args.email, args.password)
+          args => ProfileService.signIn(args.email, args.password),
+          authorize()(Auth.user)
         ),
         Mutations(
           args => ProfileService.signUp(args.email, args.name, args.surname, args.password)
