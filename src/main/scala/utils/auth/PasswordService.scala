@@ -21,7 +21,7 @@ object PasswordService {
     override def validatePassword(password: String, hashedPassword: String): Task[Unit] =
       if (SecureHash.validatePassword(password, hashedPassword))
         ZIO.unit
-      else ZIO.fail(new InvalidCredentialsException)
+      else ZIO.fail(InvalidCredentialsException)
   }
 
   val live: ZLayer[ConfigService, Nothing, PasswordService] = ZLayer {

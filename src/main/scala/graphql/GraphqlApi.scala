@@ -7,14 +7,17 @@ import caliban.wrappers.ApolloTracing.apolloTracing
 import caliban.wrappers.Wrappers._
 import caliban.{GraphQL, RootResolver}
 import dao.models.{Role, User}
-import graphql.ProfileService.ProfileService
+import graphql.GraphqlApi.Subscriptions
+import graphql.GraphqlService.ProfileService
 import graphql.auth.Auth
 import graphql.auth.Auth.{Auth, authorize}
+import models.Notification
 import zio._
+import zio.stream.ZStream
 
 import scala.language.postfixOps
 
-object ProfileApi extends GenericSchema[ProfileService with Auth] {
+object GraphqlApi extends GenericSchema[ProfileService with Auth] {
 
   case class Queries(@GQLDescription("Get auth token")
                      singIn: SignIn => RIO[ProfileService, String],
@@ -25,6 +28,10 @@ object ProfileApi extends GenericSchema[ProfileService with Auth] {
                         singUp: SignUp => RIO[ProfileService, User]
                       )
 
+  case class Subscriptions(
+                            subscribeNotifications: ZStream[Auth with ProfileService, Throwable, Notification]
+                          )
+
   implicit val roleSchema: Schema[Any, Role] = Schema.gen
   case class SignUp(email: String, name: String, surname: String, password: String)
   case class SignIn(email: String, password: String)
@@ -33,11 +40,14 @@ object ProfileApi extends GenericSchema[ProfileService with Auth] {
     graphQL(
       RootResolver(
         Queries(
-          args => ProfileService.signIn(args.email, args.password),
+          args => GraphqlService.signIn(args.email, args.password),
           authorize()(Auth.user)
         ),
         Mutations(
-          args => ProfileService.signUp(args.email, args.name, args.surname, args.password)
+          args => GraphqlService.signUp(args.email, args.name, args.surname, args.password)
+        ),
+        Subscriptions(
+          GraphqlService.subscribeNotifications
         )
       )
     ) @@

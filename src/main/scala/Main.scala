@@ -15,7 +15,7 @@ import zio._
 object Main extends ZIOAppDefault {
   override def run =
     (for {
-      interpreter <- ProfileApi.api.interpreter
+      interpreter <- GraphqlApi.api.interpreter
       _ <- Server
         .start(
           9000,
@@ -23,6 +23,8 @@ object Main extends ZIOAppDefault {
             //case Method.GET -> !! / "text" => Response.text("Hello World!")
             case _ -> !! / "api" / "graphql" =>
               ZHttpAdapter.makeHttpService(interpreter) @@ Auth.middleware
+            case _ -> !! / "api" / "subscriptions" =>
+              ZHttpAdapter.makeWebSocketService(interpreter)
           }
         ).forever
     } yield ())
@@ -37,6 +39,6 @@ object Main extends ZIOAppDefault {
         JWTService.live,
         PasswordService.live,
         Auth.live,
-        ProfileService.live
+        GraphqlService.live
       )
 }

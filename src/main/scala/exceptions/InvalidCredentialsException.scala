@@ -1,3 +1,3 @@
 package exceptions
 
-class InvalidCredentialsException extends Throwable("Invalid username or password")
+object InvalidCredentialsException extends Throwable("Invalid username or password")
