@@ -13,30 +13,30 @@ import zio._
 import zio.stream.ZStream
 
 object GraphqlService {
-  trait ProfileService {
-    def signUp(email: String, name: String, surname: String, password: String): RIO[ProfileService, User]
+  trait GraphqlService {
+    def signUp(email: String, name: String, surname: String, password: String): RIO[GraphqlService, User]
 
-    def signIn(email: String, password: String): RIO[ProfileService, String]
+    def signIn(email: String, password: String): RIO[GraphqlService, String]
 
     def subscribeNotifications: ZStream[Auth, Throwable, Notification]
 
-    def sendMessage(text: String, recipientId: Long): RIO[ProfileService with Auth, Message]
+    def sendMessage(text: String, recipientId: Long): RIO[GraphqlService with Auth, Message]
   }
 
   private case class ProfileServiceImpl(profileRepository: ProfileRepository,
                                         jwtService: JWTService,
                                         passwordService: PasswordService,
                                         messageRepository: MessageRepository,
-                                        subscribers: Hub[Notification]) extends ProfileService {
+                                        subscribers: Hub[Notification]) extends GraphqlService {
 
-    override def signUp(email: String, name: String, surname: String, password: String): RIO[ProfileService, User] =
+    override def signUp(email: String, name: String, surname: String, password: String): RIO[GraphqlService, User] =
       for {
         hashedPassword <- passwordService.hashPassword(password)
         user <-
           profileRepository.signUp(email, name, surname, hashedPassword)
       } yield user
 
-    override def signIn(email: String, password: String): RIO[ProfileService, String] =
+    override def signIn(email: String, password: String): RIO[GraphqlService, String] =
       for {
         userInfo <- profileRepository.getUserWithAuthInfoByEmail(email)
           .flatMap(ZIO.fromOption(_).mapError(_ => InvalidCredentialsException))
@@ -53,26 +53,26 @@ object GraphqlService {
         } yield notifications
       ).flatMap(ZStream.fromChunk(_))
 
-    override def sendMessage(text: String, recipientId: Long): RIO[ProfileService with Auth, Message] =
+    override def sendMessage(text: String, recipientId: Long): RIO[GraphqlService with Auth, Message] =
       for {
         userId <- Auth.user.map(_.id)
         message <- messageRepository.sendMessage(text, userId, recipientId)
       } yield message
   }
 
-  def signUp(email: String, name: String, surname: String, password: String): RIO[ProfileService, User] =
+  def signUp(email: String, name: String, surname: String, password: String): RIO[GraphqlService, User] =
     ZIO.serviceWithZIO(_.signUp(email, name, surname, password))
 
-  def signIn(email: String, password: String): RIO[ProfileService, String] =
+  def signIn(email: String, password: String): RIO[GraphqlService, String] =
     ZIO.serviceWithZIO(_.signIn(email, password))
 
-  def subscribeNotifications: ZStream[Auth with ProfileService, Throwable, Notification] =
-    ZStream.serviceWithStream[ProfileService](_.subscribeNotifications)
+  def subscribeNotifications: ZStream[Auth with GraphqlService, Throwable, Notification] =
+    ZStream.serviceWithStream[GraphqlService](_.subscribeNotifications)
 
-  def sendMessage(text: String, recipientId: Long): RIO[ProfileService with Auth, Message] =
-    ZIO.serviceWithZIO[ProfileService](_.sendMessage(text, recipientId))
+  def sendMessage(text: String, recipientId: Long): RIO[GraphqlService with Auth, Message] =
+    ZIO.serviceWithZIO[GraphqlService](_.sendMessage(text, recipientId))
 
-  val live: ZLayer[ProfileRepository with JWTService with MessageRepository with PasswordService, Nothing, ProfileService] = ZLayer {
+  val live: ZLayer[ProfileRepository with JWTService with MessageRepository with PasswordService, Nothing, GraphqlService] = ZLayer {
     for {
       subscribers <- Hub.unbounded[Notification]
       userRepository <- ZIO.service[ProfileRepository]
