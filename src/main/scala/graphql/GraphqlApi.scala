@@ -6,7 +6,7 @@ import caliban.schema.{GenericSchema, Schema}
 import caliban.wrappers.ApolloTracing.apolloTracing
 import caliban.wrappers.Wrappers._
 import caliban.{GraphQL, RootResolver}
-import dao.models.{Role, User}
+import dao.models.{Message, Role, User}
 import graphql.GraphqlApi.Subscriptions
 import graphql.GraphqlService.ProfileService
 import graphql.auth.Auth
@@ -25,7 +25,9 @@ object GraphqlApi extends GenericSchema[ProfileService with Auth] {
 
   case class Mutations(
                         @GQLDescription("Create a new user profile")
-                        singUp: SignUp => RIO[ProfileService, User]
+                        singUp: SignUp => RIO[ProfileService, User],
+                        @GQLDescription("Send message by user id")
+                        sendMessage: SendMessage => RIO[ProfileService with Auth, Message]
                       )
 
   case class Subscriptions(
@@ -35,6 +37,7 @@ object GraphqlApi extends GenericSchema[ProfileService with Auth] {
   implicit val roleSchema: Schema[Any, Role] = Schema.gen
   case class SignUp(email: String, name: String, surname: String, password: String)
   case class SignIn(email: String, password: String)
+  case class SendMessage(text: String, recipientId: Long)
 
   val api: GraphQL[ProfileService with Auth] =
     graphQL(
@@ -44,7 +47,8 @@ object GraphqlApi extends GenericSchema[ProfileService with Auth] {
           authorize()(Auth.user)
         ),
         Mutations(
-          args => GraphqlService.signUp(args.email, args.name, args.surname, args.password)
+          args => GraphqlService.signUp(args.email, args.name, args.surname, args.password),
+          args => authorize()(GraphqlService.sendMessage(args.text, args.recipientId))
         ),
         Subscriptions(
           GraphqlService.subscribeNotifications

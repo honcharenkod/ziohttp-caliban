@@ -1,6 +1,7 @@
 package graphql
 
-import dao.models.{AuthInfo, User}
+import dao.models._
+import dao.repositories.MessageRepository.MessageRepository
 import dao.repositories.ProfileRepository.ProfileRepository
 import exceptions.InvalidCredentialsException
 import graphql.auth.Auth
@@ -18,11 +19,14 @@ object GraphqlService {
     def signIn(email: String, password: String): RIO[ProfileService, String]
 
     def subscribeNotifications: ZStream[Auth, Throwable, Notification]
+
+    def sendMessage(text: String, recipientId: Long): RIO[ProfileService with Auth, Message]
   }
 
   private case class ProfileServiceImpl(profileRepository: ProfileRepository,
                                         jwtService: JWTService,
                                         passwordService: PasswordService,
+                                        messageRepository: MessageRepository,
                                         subscribers: Hub[Notification]) extends ProfileService {
 
     override def signUp(email: String, name: String, surname: String, password: String): RIO[ProfileService, User] =
@@ -41,9 +45,19 @@ object GraphqlService {
         token <- jwtService.generateToken(userInfo._1)
       } yield token
 
-    override def subscribeNotifications: ZStream[Auth, Throwable, Notification] = {
-        ZStream.fromChunk(Chunk(Notification(1, 2, "test1"), Notification(1, 2, "test2")))
-    }
+    override def subscribeNotifications: ZStream[Auth, Throwable, Notification] =
+      ZStream.scoped(
+        for {
+          userId <- Auth.user.map(_.id)
+          notifications <- subscribers.subscribe.flatMap(_.takeAll.map(_.filter(_.recipientId == userId)))
+        } yield notifications
+      ).flatMap(ZStream.fromChunk(_))
+
+    override def sendMessage(text: String, recipientId: Long): RIO[ProfileService with Auth, Message] =
+      for {
+        userId <- Auth.user.map(_.id)
+        message <- messageRepository.sendMessage(text, userId, recipientId)
+      } yield message
   }
 
   def signUp(email: String, name: String, surname: String, password: String): RIO[ProfileService, User] =
@@ -55,12 +69,16 @@ object GraphqlService {
   def subscribeNotifications: ZStream[Auth with ProfileService, Throwable, Notification] =
     ZStream.serviceWithStream[ProfileService](_.subscribeNotifications)
 
-  val live: ZLayer[ProfileRepository with JWTService with PasswordService, Nothing, ProfileService] = ZLayer {
+  def sendMessage(text: String, recipientId: Long): RIO[ProfileService with Auth, Message] =
+    ZIO.serviceWithZIO[ProfileService](_.sendMessage(text, recipientId))
+
+  val live: ZLayer[ProfileRepository with JWTService with MessageRepository with PasswordService, Nothing, ProfileService] = ZLayer {
     for {
       subscribers <- Hub.unbounded[Notification]
       userRepository <- ZIO.service[ProfileRepository]
       jwtService <- ZIO.service[JWTService]
+      messageRepository <- ZIO.service[MessageRepository]
       passwordService <- ZIO.service[PasswordService]
-    } yield ProfileServiceImpl(userRepository, jwtService, passwordService, subscribers)
+    } yield ProfileServiceImpl(userRepository, jwtService, passwordService, messageRepository, subscribers)
   }
 }

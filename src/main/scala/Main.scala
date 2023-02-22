@@ -1,7 +1,7 @@
 import caliban.ZHttpAdapter
 import dao.models.User
-import dao.repositories.ProfileRepositoryImpl
-import dao.{AuthInfoDAOImpl, UserDaoImpl}
+import dao.repositories.{MessageRepository, MessageRepositoryImpl, ProfileRepositoryImpl}
+import dao.{AuthInfoDAOImpl, MessageDAOImpl, UserDaoImpl}
 import graphql.auth.Auth
 import graphql._
 import io.getquill.SnakeCase
@@ -36,6 +36,8 @@ object Main extends ZIOAppDefault {
         UserDaoImpl.live,
         AuthInfoDAOImpl.live,
         ProfileRepositoryImpl.live,
+        MessageDAOImpl.live,
+        MessageRepositoryImpl.live,
         JWTService.live,
         PasswordService.live,
         Auth.live,
