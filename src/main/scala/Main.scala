@@ -1,9 +1,9 @@
 import caliban.ZHttpAdapter
 import dao.models.User
-import dao.repositories.{MessageRepository, MessageRepositoryImpl, ProfileRepositoryImpl}
+import dao.repositories.{MessageRepositoryImpl, ProfileRepositoryImpl}
 import dao.{AuthInfoDAOImpl, MessageDAOImpl, UserDaoImpl}
-import graphql.auth.Auth
 import graphql._
+import graphql.auth.Auth
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
 import utils.auth.{JWTService, PasswordService}
@@ -24,7 +24,7 @@ object Main extends ZIOAppDefault {
             case _ -> !! / "api" / "graphql" =>
               ZHttpAdapter.makeHttpService(interpreter) @@ Auth.middleware
             case _ -> !! / "api" / "subscriptions" =>
-              ZHttpAdapter.makeWebSocketService(interpreter)
+              ZHttpAdapter.makeWebSocketService(interpreter, webSocketHooks = Auth.WSHooks)
           }
         ).forever
     } yield ())

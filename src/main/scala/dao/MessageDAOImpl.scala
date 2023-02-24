@@ -12,7 +12,7 @@ class MessageDAOImpl(ctx: Quill.Postgres[SnakeCase]) extends CommonDAO[Message] 
   override val quoted: Quoted[EntityQuery[Message]] =
     quote(
       querySchema[Message](
-        "message",
+        "messages",
         _.id -> "id",
         _.text -> "text",
         _.senderId -> "sender_id",
@@ -24,7 +24,6 @@ class MessageDAOImpl(ctx: Quill.Postgres[SnakeCase]) extends CommonDAO[Message] 
     run(
       quote(
         quoted.insert(
-          _.id -> lift(entity.id),
           _.text -> lift(entity.text),
           _.senderId -> lift(entity.senderId),
           _.recipientId -> lift(entity.recipientId)

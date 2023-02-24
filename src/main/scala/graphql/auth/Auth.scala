@@ -1,10 +1,14 @@
 package graphql.auth
 
+import caliban.Value.StringValue
+import caliban.interop.tapir.{StreamTransformer, WebSocketHooks}
+import caliban._
 import dao.models._
+import exceptions.Unauthorized
 import utils.auth.JWTService.JWTService
-import zhttp.http.HttpError.Unauthorized
 import zhttp.http._
 import zio._
+import zio.stream.ZStream
 
 object Auth {
   type Authentication = FiberRef[Option[User]]
@@ -26,11 +30,11 @@ object Auth {
 
   private def commonAuthorize[R <: AuthService, A](roles: Seq[Role])(implicit action: RIO[R, A]): RIO[R with Authentication, A] =
     for {
-      user <- ZIO.serviceWithZIO[Authentication](_.get.flatMap(ZIO.fromOption(_).mapError(_ => Unauthorized.asInstanceOf[Throwable])))
+      user <- ZIO.serviceWithZIO[Authentication](_.get.flatMap(ZIO.fromOption(_).mapError(_ => Unauthorized)))
       result <- ZIO.serviceWithZIO[AuthService](_.hasRole(roles, user)) *> action
     } yield result
 
-  val user = ZIO.serviceWithZIO[Authentication](_.get.flatMap(ZIO.fromOption(_).mapError(_ => Unauthorized.asInstanceOf[Throwable])))
+  val user = ZIO.serviceWithZIO[Authentication](_.get.flatMap(ZIO.fromOption(_).mapError(_ => Unauthorized)))
 
   val live =
     ZLayer.fromFunction { () =>
@@ -39,7 +43,7 @@ object Auth {
           ZIO.fromOption(
             roles.find(role => user.role == role)
           )
-            .mapError(_ => Unauthorized.asInstanceOf[Throwable])
+            .mapError(_ => Unauthorized)
             .map(_ => {})
       }
     }
@@ -58,4 +62,21 @@ object Auth {
         } yield request
       }
   }
+
+  val WSHooks = WebSocketHooks.init[Authentication with JWTService, CalibanError] { payload =>
+    (payload match {
+      case InputValue.ObjectValue(fields) =>
+        fields.get("Authorization") match {
+          case Some(token: StringValue) =>
+            ZIO.serviceWithZIO[JWTService](_.validateToken(token.value)).map(Some(_))
+              .mapError(e => CalibanError.ExecutionError(e.getMessage))
+          case _ => ZIO.fail()
+        }
+      case _ => ZIO.fail()
+    })
+      .orElseFail(CalibanError.ExecutionError("Unable to decode payload"))
+      .flatMap(user => ZIO.serviceWithZIO[Authentication](_.set(user)))
+  } ++
+    WebSocketHooks.afterInit(ZIO.failCause(Cause.empty).delay(10.seconds))
+
 }
