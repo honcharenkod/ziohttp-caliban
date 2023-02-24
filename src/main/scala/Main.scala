@@ -1,7 +1,8 @@
 import caliban.ZHttpAdapter
+import caliban.uploads.Uploads
 import dao.models.User
 import dao.repositories.{MessageRepositoryImpl, ProfileRepositoryImpl}
-import dao.{AuthInfoDAOImpl, MessageDAOImpl, UserDaoImpl}
+import dao.{AuthInfoDAOImpl, MessageDAOImpl, ProfilePhotoDAOImpl, UserDaoImpl}
 import graphql._
 import graphql.auth.Auth
 import io.getquill.SnakeCase
@@ -29,12 +30,14 @@ object Main extends ZIOAppDefault {
         ).forever
     } yield ())
       .provide(
+        Uploads.empty,
         ZLayer.scoped(FiberRef.make(Option.empty[User])),
         ConfigService.live,
         Quill.Postgres.fromNamingStrategy(SnakeCase),
         Quill.DataSource.fromPrefix("database"),
         UserDaoImpl.live,
         AuthInfoDAOImpl.live,
+        ProfilePhotoDAOImpl.live,
         ProfileRepositoryImpl.live,
         MessageDAOImpl.live,
         MessageRepositoryImpl.live,

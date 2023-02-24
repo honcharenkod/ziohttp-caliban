@@ -1,14 +1,15 @@
 package dao.repositories
 
-import dao.models.{AuthInfo, Role, User}
-import dao.{AuthInfoDAOImpl, UserDaoImpl}
+import dao.models._
+import dao._
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
 import zio._
 
 class ProfileRepositoryImpl(ctx: Quill.Postgres[SnakeCase],
                             userDAO: UserDaoImpl,
-                            authInfoDAO: AuthInfoDAOImpl) extends ProfileRepository.Service {
+                            authInfoDAO: AuthInfoDAOImpl,
+                            profilePhotoDAO: ProfilePhotoDAOImpl) extends ProfileRepository.Service {
 
   import ctx._
 
@@ -30,6 +31,16 @@ class ProfileRepositoryImpl(ctx: Quill.Postgres[SnakeCase],
             .join(authInfo).on(_.id == _.userId)
         ).map(_.headOption)
     } yield password
+
+  override def uploadProfilePhoto(userId: Long, data: Chunk[Byte], mimeType: String): Task[ProfilePhoto] =
+    profilePhotoDAO.create(
+      ProfilePhoto(
+        0,
+        userId,
+        data,
+        mimeType
+      )
+    )
 }
 
 object ProfileRepositoryImpl {
@@ -38,6 +49,7 @@ object ProfileRepositoryImpl {
       ctx <- ZIO.service[Quill.Postgres[SnakeCase]]
       userDAO <- ZIO.service[UserDaoImpl]
       authInfoDAO <- ZIO.service[AuthInfoDAOImpl]
-    } yield new ProfileRepositoryImpl(ctx, userDAO, authInfoDAO)
+      profilePhotoDAO <- ZIO.service[ProfilePhotoDAOImpl]
+    } yield new ProfileRepositoryImpl(ctx, userDAO, authInfoDAO, profilePhotoDAO)
   }
 }

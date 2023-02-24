@@ -1,11 +1,12 @@
 package graphql
 
+import caliban.uploads.{Upload, Uploads}
 import dao.models._
 import dao.repositories.MessageRepository.MessageRepository
 import dao.repositories.ProfileRepository.ProfileRepository
 import exceptions.InvalidCredentials
 import graphql.auth.Auth
-import graphql.auth.Auth.{Auth, user}
+import graphql.auth.Auth._
 import models.Notification
 import utils.auth.JWTService.JWTService
 import utils.auth.PasswordService.PasswordService
@@ -22,6 +23,8 @@ object GraphqlService {
     def subscribeNotifications: ZStream[Auth, Throwable, Notification]
 
     def sendMessage(text: String, recipientId: Long): RIO[GraphqlService with Auth, Message]
+
+    def uploadProfilePhoto(photo: Upload): RIO[GraphqlService with Auth with Uploads, Unit]
   }
 
   private case class ProfileServiceImpl(profileRepository: ProfileRepository,
@@ -86,6 +89,15 @@ object GraphqlService {
             )
           )
       } yield message
+
+    override def uploadProfilePhoto(photo: Upload): RIO[GraphqlService with Auth with Uploads, Unit] =
+      for {
+        userId <- Auth.user.map(_.id)
+        bytes <- photo.allBytes
+        mime <- photo.meta.map(_.flatMap(_.contentType))
+          .flatMap(ZIO.fromOption(_).mapError(_ => new Throwable("Invalid mime-type")))
+        _ <- profileRepository.uploadProfilePhoto(userId, bytes, mime)
+      } yield {}
   }
 
   def signUp(email: String, name: String, surname: String, password: String): RIO[GraphqlService, User] =
@@ -99,6 +111,9 @@ object GraphqlService {
 
   def sendMessage(text: String, recipientId: Long): RIO[GraphqlService with Auth, Message] =
     ZIO.serviceWithZIO[GraphqlService](_.sendMessage(text, recipientId))
+
+  def uploadProfilePhoto(photo: Upload): RIO[GraphqlService with Auth with Uploads, Unit] =
+    ZIO.serviceWithZIO[GraphqlService](_.uploadProfilePhoto(photo))
 
   val live: ZLayer[ProfileRepository with JWTService with MessageRepository with PasswordService, Nothing, GraphqlService] = ZLayer {
     for {

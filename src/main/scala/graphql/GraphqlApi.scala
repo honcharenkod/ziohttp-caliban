@@ -3,6 +3,7 @@ package graphql
 import caliban.GraphQL.graphQL
 import caliban.schema.Annotations.GQLDescription
 import caliban.schema.{GenericSchema, Schema}
+import caliban.uploads._
 import caliban.wrappers.ApolloTracing.apolloTracing
 import caliban.wrappers.Wrappers._
 import caliban.{GraphQL, RootResolver}
@@ -16,7 +17,7 @@ import zio.stream.ZStream
 
 import scala.language.postfixOps
 
-object GraphqlApi extends GenericSchema[GraphqlService with Auth] {
+object GraphqlApi extends GenericSchema[GraphqlService with Auth with Uploads] {
 
   case class Queries(@GQLDescription("Get auth token")
                      singIn: SignIn => RIO[GraphqlService, String],
@@ -26,7 +27,9 @@ object GraphqlApi extends GenericSchema[GraphqlService with Auth] {
                         @GQLDescription("Create a new user profile")
                         singUp: SignUp => RIO[GraphqlService, User],
                         @GQLDescription("Send message by user id")
-                        sendMessage: SendMessage => RIO[GraphqlService with Auth, Message]
+                        sendMessage: SendMessage => RIO[GraphqlService with Auth, Message],
+                        @GQLDescription("Upload profile photo")
+                        uploadProfilePhoto: UploadProfilePhoto => RIO[GraphqlService with Auth with Uploads, Unit]
                       )
 
   case class Subscriptions(
@@ -37,8 +40,9 @@ object GraphqlApi extends GenericSchema[GraphqlService with Auth] {
   case class SignUp(email: String, name: String, surname: String, password: String)
   case class SignIn(email: String, password: String)
   case class SendMessage(text: String, recipientId: Long)
+  case class UploadProfilePhoto(photo: Upload)
 
-  val api: GraphQL[GraphqlService with Auth] =
+  val api: GraphQL[GraphqlService with Auth with Uploads] =
     graphQL(
       RootResolver(
         Queries(
@@ -47,7 +51,8 @@ object GraphqlApi extends GenericSchema[GraphqlService with Auth] {
         ),
         Mutations(
           args => GraphqlService.signUp(args.email, args.name, args.surname, args.password),
-          args => authorize()(GraphqlService.sendMessage(args.text, args.recipientId))
+          args => authorize()(GraphqlService.sendMessage(args.text, args.recipientId)),
+          args => authorize()(GraphqlService.uploadProfilePhoto(args.photo))
         ),
         Subscriptions(
           GraphqlService.subscribeNotifications
