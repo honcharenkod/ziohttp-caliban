@@ -1,14 +1,15 @@
 package graphql.auth
 
+import caliban.CalibanError._
+import caliban.ResponseValue._
 import caliban.Value.StringValue
-import caliban.interop.tapir.{StreamTransformer, WebSocketHooks}
 import caliban._
+import caliban.interop.tapir._
 import dao.models._
 import exceptions.Unauthorized
 import utils.auth.JWTService.JWTService
 import zhttp.http._
 import zio._
-import zio.stream.ZStream
 
 object Auth {
   type Authentication = FiberRef[Option[User]]
@@ -57,6 +58,12 @@ object Auth {
             case Some(token) =>
               ZIO.serviceWithZIO[JWTService](_.validateToken(token)).map(Some(_))
             case None => ZIO.succeed(None)
+          }
+          _ <- user match {
+            case Some(user) =>
+              ZIO.logInfo(s"User ${user.name} sent request.")
+            case None =>
+              ZIO.logInfo(s"Unauthorized request sent.")
           }
           _ <- ZIO.serviceWithZIO[Authentication](_.set(user))
         } yield request

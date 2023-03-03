@@ -23,7 +23,7 @@ object Main extends ZIOAppDefault {
           Http.collectHttp[Request] {
             //case Method.GET -> !! / "text" => Response.text("Hello World!")
             case _ -> !! / "api" / "graphql" =>
-              ZHttpAdapter.makeHttpService(interpreter) @@ Auth.middleware
+              ZHttpAdapter.makeHttpService(interpreter) @@ (Auth.middleware ++ Middleware.debug)
             case _ -> !! / "api" / "subscriptions" =>
               ZHttpAdapter.makeWebSocketService(interpreter, webSocketHooks = Auth.WSHooks)
           }

@@ -1,3 +1,5 @@
 package exceptions
 
-object Unauthorized extends RuntimeException("Unauthorized")
+import caliban.CalibanError.ExecutionError
+
+object Unauthorized extends ExecutionError("Unauthorized")

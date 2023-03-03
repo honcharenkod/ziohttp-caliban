@@ -1,3 +1,5 @@
 package exceptions
 
-object InvalidCredentials extends RuntimeException("Invalid username or password")
+import caliban.CalibanError.ExecutionError
+
+object InvalidCredentials extends ExecutionError("Invalid username or password")
