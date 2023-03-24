@@ -31,7 +31,7 @@ object GraphqlService {
                                         jwtService: JWTService,
                                         passwordService: PasswordService,
                                         messageRepository: MessageRepository,
-                                        subscribersRef: Ref[ConcurrentMap[Long, Hub[Notification]]]) extends GraphqlService {
+                                        subscribers: Hub[Notification]) extends GraphqlService {
 
     override def signUp(email: String, name: String, surname: String, password: String): RIO[GraphqlService, User] =
       for {
@@ -50,44 +50,25 @@ object GraphqlService {
       } yield token
 
 
-    //TODO: Fix notifications
     override def subscribeNotifications: ZStream[Auth, Throwable, Notification] = {
-      ZStream.fromZIO(
-        for {
-          userId <- Auth.user.map(_.id)
-          _ <- test(userId)
-          hub <- subscribersRef.get.flatMap(_.get(userId)).flatMap(ZIO.fromOption(_).mapError(_ => new Throwable()))
-        } yield hub
-      ).flatMap(ZStream.fromHub(_))
-    }
-
-    private def test(userId: Long): Task[Unit] = {
       for {
-        hub <- Hub.unbounded[Notification]
-        subscribers <- subscribersRef.get
-        _ <- subscribers.put(userId, hub)
-        _ <- subscribersRef.update(_ => subscribers)
-      } yield {}
+        userId <- ZStream.fromZIO(Auth.user.map(_.id))
+        result <-
+          ZStream.fromHub(subscribers).filter(_.recipientId == userId)
+      } yield result
     }
 
-    override def sendMessage(text: String, recipientId: Long): RIO[GraphqlService with Auth, Message] =
+    def sendMessage(text: String, recipientId: Long): RIO[GraphqlService with Auth, Message]  =
       for {
         userId <- Auth.user.map(_.id)
         message <- messageRepository.sendMessage(text, userId, recipientId)
-        _ <- subscribersRef.get
-          .flatMap(_.get(recipientId)
-            .map(
-              _.map(
-                _.publish(
-                  Notification(
-                    userId,
-                    recipientId,
-                    text
-                  )
-                )
-              )
-            )
+        _ <- subscribers.publish(
+          Notification(
+            userId,
+            recipientId,
+            text
           )
+        )
       } yield message
 
     override def uploadProfilePhoto(photo: Upload): RIO[GraphqlService with Auth with Uploads, Unit] =
@@ -115,14 +96,13 @@ object GraphqlService {
   def uploadProfilePhoto(photo: Upload): RIO[GraphqlService with Auth with Uploads, Unit] =
     ZIO.serviceWithZIO[GraphqlService](_.uploadProfilePhoto(photo))
 
-  val live: ZLayer[ProfileRepository with JWTService with MessageRepository with PasswordService, Nothing, GraphqlService] = ZLayer {
+  val live: ZLayer[ProfileRepository with JWTService with MessageRepository with PasswordService with Scope, Nothing, GraphqlService] = ZLayer {
     for {
-      map <- ConcurrentMap.empty[Long, Hub[Notification]]
-      subscribers <- Ref.make(map)
+      hub <- Hub.unbounded[Notification]
       userRepository <- ZIO.service[ProfileRepository]
       jwtService <- ZIO.service[JWTService]
       messageRepository <- ZIO.service[MessageRepository]
       passwordService <- ZIO.service[PasswordService]
-    } yield ProfileServiceImpl(userRepository, jwtService, passwordService, messageRepository, subscribers)
+    } yield ProfileServiceImpl(userRepository, jwtService, passwordService, messageRepository, hub)
   }
 }
