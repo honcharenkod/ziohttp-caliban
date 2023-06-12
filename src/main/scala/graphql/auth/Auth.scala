@@ -8,8 +8,8 @@ import caliban.interop.tapir._
 import dao.models._
 import exceptions.Unauthorized
 import utils.auth.JWTService.JWTService
-import zhttp.http._
 import zio._
+import zio.http.{Header, HttpAppMiddleware, RequestHandlerMiddleware}
 
 object Auth {
   type Authentication = FiberRef[Option[User]]
@@ -49,26 +49,24 @@ object Auth {
       }
     }
 
-  def middleware = new Middleware[JWTService with Authentication, Throwable, Request, Response, Request, Response] {
-    override def apply[R1 <: JWTService with Authentication, E1 >: Throwable](http: Http[R1, E1, Request, Response]): Http[R1, E1, Request, Response] =
-      http.contramapZIO[R1, E1, Request] { request =>
-        for {
-          token <- ZIO.succeed(request.authorization.map(_.toString))
-          user <- token match {
-            case Some(token) =>
-              ZIO.serviceWithZIO[JWTService](_.validateToken(token)).map(Some(_))
-            case None => ZIO.succeed(None)
-          }
-          _ <- user match {
-            case Some(user) =>
-              ZIO.logInfo(s"User ${user.name} sent request.")
-            case None =>
-              ZIO.logInfo(s"Unauthorized request sent.")
-          }
-          _ <- ZIO.serviceWithZIO[Authentication](_.set(user))
-        } yield request
-      }
-  }
+  def middleware =
+    HttpAppMiddleware.customAuthZIO { headers =>
+      for {
+        token <- ZIO.succeed(headers.get(Header.Authorization).map(_.toString))
+        user <- token match {
+          case Some(token) =>
+            ZIO.serviceWithZIO[JWTService](_.validateToken(token)).map(Some(_)).catchAll(_ => ZIO.succeed(None))
+          case None => ZIO.succeed(None)
+        }
+        _ <- user match {
+          case Some(u) =>
+            ZIO.logInfo(s"User ${u.name} sent request.")
+          case None =>
+            ZIO.logInfo(s"Unauthorized request sent.")
+        }
+        result <- ZIO.serviceWithZIO[Authentication](_.set(user)).map(_ => true)
+      } yield result
+    }
 
   val WSHooks = WebSocketHooks.init[Authentication with JWTService, CalibanError] { payload =>
     (payload match {

@@ -1,4 +1,5 @@
 import caliban.ZHttpAdapter
+import caliban.interop.tapir.{HttpInterpreter, WebSocketInterpreter}
 import caliban.uploads.Uploads
 import dao.models.User
 import dao.repositories.{MessageRepositoryImpl, ProfileRepositoryImpl}
@@ -9,27 +10,27 @@ import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
 import utils.auth.{JWTService, PasswordService}
 import utils.config.ConfigService
-import zhttp.http._
-import zhttp.service.Server
 import zio._
+import zio.http._
 
 object Main extends ZIOAppDefault {
+  import sttp.tapir.json.circe._
+
   override def run =
     (for {
       interpreter <- GraphqlApi.api.interpreter
       _ <- Server
-        .start(
-          9000,
+        .serve(
           Http.collectHttp[Request] {
             //case Method.GET -> !! / "text" => Response.text("Hello World!")
-            case _ -> !! / "api" / "graphql" =>
-              ZHttpAdapter.makeHttpService(interpreter) @@ (Auth.middleware ++ Middleware.debug)
+            case _ -> !! / "api" / "graphql" => ZHttpAdapter.makeHttpService(HttpInterpreter(interpreter)) @@ Auth.middleware
             case _ -> !! / "api" / "subscriptions" =>
-              ZHttpAdapter.makeWebSocketService(interpreter, webSocketHooks = Auth.WSHooks)
+              ZHttpAdapter.makeWebSocketService(WebSocketInterpreter(interpreter, webSocketHooks = Auth.WSHooks))
           }
         ).forever
     } yield ())
       .provide(
+        Scope.default,
         Uploads.empty,
         ZLayer.scoped(FiberRef.make(Option.empty[User])),
         ConfigService.live,
@@ -44,6 +45,8 @@ object Main extends ZIOAppDefault {
         JWTService.live,
         PasswordService.live,
         Auth.live,
-        GraphqlService.live
+        GraphqlService.live,
+        ZLayer.succeed(Server.Config.default.port(9000)),
+        Server.live
       )
 }

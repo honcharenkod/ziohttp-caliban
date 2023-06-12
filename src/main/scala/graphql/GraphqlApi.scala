@@ -1,12 +1,11 @@
 package graphql
 
-import caliban.GraphQL.graphQL
 import caliban.schema.Annotations.GQLDescription
 import caliban.schema.{GenericSchema, Schema}
 import caliban.uploads._
 import caliban.wrappers.ApolloTracing.apolloTracing
 import caliban.wrappers.Wrappers._
-import caliban.{GraphQL, RootResolver}
+import caliban.{GraphQL, RootResolver, graphQL}
 import dao.models.{Message, Role, User}
 import graphql.GraphqlService.GraphqlService
 import graphql.auth.Auth
@@ -14,10 +13,12 @@ import graphql.auth.Auth.{Auth, authorize}
 import models.Notification
 import zio._
 import zio.stream.ZStream
+import caliban.schema.ArgBuilder.auto._
 
 import scala.language.postfixOps
 
 object GraphqlApi extends GenericSchema[GraphqlService with Auth with Uploads] {
+  import auto._
 
   case class Queries(@GQLDescription("Get auth token")
                      singIn: SignIn => RIO[GraphqlService, String],
@@ -36,10 +37,12 @@ object GraphqlApi extends GenericSchema[GraphqlService with Auth with Uploads] {
                             subscribeNotifications: ZStream[Auth with GraphqlService, Throwable, Notification]
                           )
 
-  implicit val roleSchema: Schema[Any, Role] = Schema.gen
   case class SignUp(email: String, name: String, surname: String, password: String)
+
   case class SignIn(email: String, password: String)
+
   case class SendMessage(text: String, recipientId: Long)
+
   case class UploadProfilePhoto(photo: Upload)
 
   val api: GraphQL[GraphqlService with Auth with Uploads] =

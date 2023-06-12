@@ -1,5 +1,6 @@
 package dao.models
 
+import caliban.schema.Schema
 import io.getquill._
 import zio.json._
 
@@ -25,5 +26,7 @@ object Role {
 
   implicit val jsonDecoder: JsonDecoder[Role] =
     DeriveJsonDecoder.gen[Role]
+
+  implicit val schema: Schema[Any, Role] = Schema.gen
 }
 
