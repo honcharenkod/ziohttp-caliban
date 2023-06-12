@@ -11,6 +11,4 @@ object User {
 
   implicit val encoder: JsonEncoder[User] =
     DeriveJsonEncoder.gen[User]
-
-  implicit val schema: Schema[Any, User] = Schema.gen
 }

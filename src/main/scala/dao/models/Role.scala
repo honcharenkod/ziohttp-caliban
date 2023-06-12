@@ -26,7 +26,5 @@ object Role {
 
   implicit val jsonDecoder: JsonDecoder[Role] =
     DeriveJsonDecoder.gen[Role]
-
-  implicit val schema: Schema[Any, Role] = Schema.gen
 }
 
