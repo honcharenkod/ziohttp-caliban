@@ -9,7 +9,7 @@ import zio._
 class ProfileRepositoryImpl(ctx: Quill.Postgres[SnakeCase],
                             userDAO: UserDaoImpl,
                             authInfoDAO: AuthInfoDAOImpl,
-                            profilePhotoDAO: ProfilePhotoDAOImpl) extends ProfileRepository.Service {
+                            profilePhotoDAO: ProfilePhotoDAOImpl) extends ProfileRepository {
 
   import ctx._
 

@@ -8,7 +8,8 @@ import graphql._
 import graphql.auth.Auth
 import io.getquill.SnakeCase
 import io.getquill.jdbczio.Quill
-import utils.auth.{JWTService, PasswordService}
+import utils.auth.PasswordService
+import utils.auth.jwt.JWTServiceImpl
 import utils.config.ConfigService
 import zio._
 import zio.http._
@@ -30,7 +31,6 @@ object Main extends ZIOAppDefault {
         ).forever
     } yield ())
       .provide(
-        Scope.default,
         Uploads.empty,
         ZLayer.scoped(FiberRef.make(Option.empty[User])),
         ConfigService.live,
@@ -42,7 +42,7 @@ object Main extends ZIOAppDefault {
         ProfileRepositoryImpl.live,
         MessageDAOImpl.live,
         MessageRepositoryImpl.live,
-        JWTService.live,
+        JWTServiceImpl.live,
         PasswordService.live,
         Auth.live,
         GraphqlService.live,

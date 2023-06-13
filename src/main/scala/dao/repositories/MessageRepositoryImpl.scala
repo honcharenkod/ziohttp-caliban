@@ -4,7 +4,7 @@ import dao.MessageDAOImpl
 import dao.models.Message
 import zio._
 
-class MessageRepositoryImpl (messageDAO: MessageDAOImpl) extends MessageRepository.Service {
+class MessageRepositoryImpl (messageDAO: MessageDAOImpl) extends MessageRepository {
   override def sendMessage(text: String, senderId: Long, recipientId: Long): Task[Message] =
     messageDAO.create(
       Message(

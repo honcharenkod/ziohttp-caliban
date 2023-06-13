@@ -1,15 +1,13 @@
 package graphql.auth
 
-import caliban.CalibanError._
-import caliban.ResponseValue._
 import caliban.Value.StringValue
 import caliban._
 import caliban.interop.tapir._
 import dao.models._
 import exceptions.Unauthorized
-import utils.auth.JWTService.JWTService
+import utils.auth.jwt.JWTService
 import zio._
-import zio.http.{Header, HttpAppMiddleware, RequestHandlerMiddleware}
+import zio.http.{Header, HttpAppMiddleware}
 
 object Auth {
   type Authentication = FiberRef[Option[User]]
@@ -37,8 +35,8 @@ object Auth {
 
   val user = ZIO.serviceWithZIO[Authentication](_.get.flatMap(ZIO.fromOption(_).mapError(_ => Unauthorized)))
 
-  val live =
-    ZLayer.fromFunction { () =>
+  val live: ZLayer[Any, Nothing, AuthService] =
+    ZLayer.succeed {
       new AuthService {
         override def hasRole(roles: Seq[Role], user: User): Task[Unit] =
           ZIO.fromOption(

@@ -1,29 +1,30 @@
 package utils.config
 
-import zio.config._
-import typesafe._
-import magnolia._
+import utils.config
 import zio.ZLayer
+import zio.config._
+import zio.config.magnolia._
+import zio.config.typesafe._
 
 object ConfigService {
-  trait ConfigService {
+  type Config = Service
+
+  trait Service {
     def get: CommonConfig
   }
 
-  case class ConfigServiceImpl(config: CommonConfig) extends ConfigService {
-    override def get: CommonConfig = config
-  }
-
   case class CommonConfig(jwt: JWT)
+
   case class JWT(secretKey: String)
 
-  val live = ZLayer {
+  val live: ZLayer[Any, ReadError[String], Config] = ZLayer.fromZIO {
     for {
       config <-
         read(
           descriptorForPureConfig[CommonConfig] from ConfigSource.fromHoconFilePath("src/main/resources/application.conf")
         )
-    } yield ConfigServiceImpl(config)
+    } yield new Service {
+      override def get: CommonConfig = config
+    }
   }
-
 }
