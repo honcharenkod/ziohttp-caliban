@@ -21,7 +21,7 @@ object ConfigService {
     for {
       config <-
         read(
-          descriptorForPureConfig[CommonConfig] from ConfigSource.fromHoconFilePath("src/main/resources/application.conf")
+          descriptorForPureConfig[CommonConfig] from TypesafeConfigSource.fromResourcePath
         )
     } yield new Service {
       override def get: CommonConfig = config
